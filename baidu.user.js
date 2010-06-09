@@ -24,7 +24,7 @@ if (!GM_setValue) {
 if (!GM_getValue) {
   function GM_getValue(key, def) {
     var ret = localStorage.getItem(key);
-    if (window.opera && ret == 'false') { // opera bug
+    if (ret == 'false') {
       ret = false;
     }
     if (!ret && ret !== false) {
