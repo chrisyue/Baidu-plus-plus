@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        Baidu++
 // @namespace   http://www.5isharing.com
-// @version     1.7.1
+// @version     1.7.2
 // @include     http://www.baidu.com/s?*
 // @include     http://www.baidu.com/baidu?*
 // @description 增强百度搜索结果页
@@ -11,41 +11,26 @@
 
 (function() {
 
-var version = "1.7.1";
+var version = "1.7.2";
 
 // ==Functions==
 // emulate greasemonkey api
 if (!GM_setValue) {
-  function GM_setValue(key, value) 
-  {
-    if (!key) return ;
-    var lifeTime = 31536000;
-    document.cookie = escape(key) + "=" + escape(value) 
-      + ";expires=" + (new Date((new Date()).getTime() + (1000 * lifeTime))).toGMTString() 
-      + ";path=/";
+  function GM_setValue(key, value) {
+    localStorage.setItem(key, value);
   }
 }
 
 if (!GM_getValue) {
-  function GM_getValue(key, def)
-  {
-    var cookieJar = document.cookie.split("; ");
-    for (var x = 0; x < cookieJar.length; x++) {
-      var oneCookie = cookieJar[x].split("=");
-      if (oneCookie[0] == escape(key)) {
-        try {
-          var ret = unescape(oneCookie[1]);
-          var tmp = eval('(' + ret + ')');
-          if (typeof tmp != "object") {
-            ret = tmp;
-          }
-        } catch(e) { 
-          return def;
-        }
-        return ret;
-      }
+  function GM_getValue(key, def) {
+    var ret = localStorage.getItem(key);
+    if (window.opera && ret == 'false') { // opera bug
+      ret = false;
     }
-    return def;
+    if (!ret && ret !== false) {
+      return def;
+    }
+    return ret;
   }
 }
 
@@ -307,7 +292,7 @@ Array.prototype.hasGot = function(value) {
 var baidu = {
 
   getResultsByCondition: function(condition) {
-    var xpath = "//td[@class='f' or starts-with(@class, 'f ')]/../../..##cond##"
+    var xpath = "//td[@class='f' or starts-with(@class, 'f ')]/../../../self::*##cond##"
       + "|//table[@id>0]##cond##";
     if (condition) {
       return x(xpath.replace(/##cond##/g, '[' + condition + ']'))
@@ -359,7 +344,7 @@ var baidu = {
   },
   
   tip: function() { //你要找的是不是
-    return x("//body/p[starts-with(@style, 'margin:')]");
+    return x("//div[@id='wrapper']/p[starts-with(@style, 'margin:')]");
   },
   
   body: function() {
@@ -367,7 +352,7 @@ var baidu = {
   },
   
   service: function() { // baidu's other service like zhidao, tieba
-    return x("//body/div[starts-with(@style, 'background: url')]")
+    return x("//div[@id='wrapper']/div[starts-with(@style, 'background:')]")
   },
 
   pagination: function() {
@@ -504,6 +489,7 @@ var modules = {
             #bpp-config-form > div {\
               height: 350px; clear: both; padding: 10px;\
               -moz-box-shadow: 1px 1px 1px #aaa;\
+              -webkit-box-shadow: 1px 1px 1px #aaa;\
               box-shadow: 1px 1px 1px #aaa;\
             }\
             #bpp-config-form ul {\
@@ -521,6 +507,7 @@ var modules = {
             .bpp-config-tab-focus {\
               color: #000 !important;\
               -moz-box-shadow: 1px 0px 0px #aaa;\
+              -webkit-box-shadow: 1px 0px 0px #aaa;\
               box-shadow: 1px 0px 0px #aaa;\
               margin-right: 1px;\
             }\
@@ -932,8 +919,8 @@ var modules = {
           background: #fff;\
           -moz-border-radius: 10px;\
           border-radius: 10px;\
-          min-width: 539px;\
           display: table;\
+          min-width: 539px;\
           margin: 0 10px 10px;\
         }\
         .p * {\
@@ -997,7 +984,7 @@ var modules = {
 
     enhanceLineBreak: function() {
       // the best way to enhance br is no br
-      GM_addStyle("body > br { display: none }");
+      GM_addStyle("#wrapper > br { display: none }");
     },
 
     enhanceResults: function() { 
@@ -1017,15 +1004,13 @@ var modules = {
   },
   
   sideBar: {
-    
-    name: "显示右侧栏",
-    
+    name:   "显示右侧栏",
     config: "bpp-sidebar",
-    
-    cid: 1,
+    cid:    1,
+    help:   "chrome不可用",
     
     enable: function() {
-      return gm(this.config, true);
+      return !window.chrome && gm(this.config, true);
     },
     
     run: function() {
@@ -1278,16 +1263,18 @@ var modules = {
 
     run: function() {
       GM_addStyle("\
-        body > table:first-child {\
+        #wrapper > table:first-child {\
           position: fixed;\
           z-index: 100;\
           background: #fff;\
           top: 0;\
           padding-top: 5px;\
           padding-bottom: 5px;\
-          border-bottom: 2px solid #aaa\
+          -moz-box-shadow: 0 2px 2px #999;\
+          -webkit-box-shadow: 0 2px 2px #999;\
+          box-shadow: 0 2px 2px #999;\
         }\
-        body { margin-top: 60px; }\
+        body { margin-top: 66px; }\
       ");
     }
   },
@@ -1437,10 +1424,10 @@ var modules = {
     
     title: "维基百科",
     
-    help: "返回wiki可能有的定义或解释",
+    help: "返回wiki可能有的定义或解释。chrome不可用",
     
     enable: function() {
-      return modules.sideBar.enable() && gm(this.config, true);
+      return !window.chrome && modules.sideBar.enable() && gm(this.config, true);
     },
     
     dependsOn: function() {
@@ -1513,10 +1500,10 @@ var modules = {
     
     cid: 2,
     
-    help: "在侧边栏开启flickr的图片相关结果",
+    help: "在侧边栏开启flickr的图片相关结果。chrome不可用",
     
     enable: function() {
-      return modules.sideBar.enable() && gm(this.config, true);
+      return !window.chrome && modules.sideBar.enable() && gm(this.config, true);
     },
     
     run: function() {
@@ -1672,11 +1659,7 @@ var modules = {
     },
     
     enable: function() {
-      return modules.sideBar.enable() && gm(this.config, true);
-    },
-    
-    dependsOn: function() {
-      return modules.sideBar;
+      return gm(this.config, true);
     },
     
     _getUl: function() {
@@ -1696,7 +1679,7 @@ var modules = {
     },
 
     run: function() {
-      if (!baidu.sideBar2) return ;
+      if (!this.enable()) return ;
       var keyword = baidu.get("keyword");
       GM_addStyle("\
         img.bpp-favicon-img {\
@@ -1725,7 +1708,7 @@ var modules = {
         link.href   = engines[i].query + encodeURIComponent(keyword);
         link.target = "_blank";
 
-        if (engines[i].show) {
+        if (engines[i].show && modules.sideBar.enable()) {
           var span = create("span");
           with (span) {
             style.color = "red"; 
@@ -1817,7 +1800,7 @@ var modules = {
       }
       for (var i = 0; i < cnt; i++) {
         var elm = tables.snapshotItem(i);
-        var a = x(".//td/a/font[@size='3']/..[1]", elm).snapshotItem(0); 
+        var a = x(".//td/a/font[@size='3']/../self::*[1]", elm).snapshotItem(0); 
         if (!a) continue;
         var div = create("div"); 
         div.className = "bpp-favicon";
@@ -1873,7 +1856,7 @@ var modules = {
     },
     
     addPreview: function(elm) {
-      var a = x(".//td/a/font[@size='3']/..[1]", elm).snapshotItem(0); 
+      var a = x(".//td/a/font[@size='3']/../self::*[1]", elm).snapshotItem(0); 
       if (!a) return ;
       var link = create("a");
       link.href = a.href;
@@ -2004,7 +1987,7 @@ var modules = {
       if (!cnt) return ;
       for (var i = 0; i < cnt; i++) {
         var elm = tables.snapshotItem(i);
-        var a   = x(".//td/a/font[@size='3']/..[1]", elm).snapshotItem(0);
+        var a   = x(".//td/a/font[@size='3']/../self::*[1]", elm).snapshotItem(0);
         if (!a) continue;
         a.removeAttribute("onmousedown");
         elm.setAttribute("bpp-noTrace", "bpp-noTrace");
@@ -2024,14 +2007,14 @@ var modules = {
     
     valueType: "number",
     
-    help: "输入框内容为版本检测周期，单位为天",
+    help: "输入框内容为版本检测周期，单位为天。Opera和chrome不可用",
     
     value: function() {
       return gm(this.config2, 2);
     },
     
     enable: function() {
-      return gm(this.config, true);
+      return !window.chrome && !window.opera && gm(this.config, true);
     },
     
     run: function() {
@@ -2116,7 +2099,7 @@ var util = {
           padding: 10px;\
           margin: 0 10px 10px;\
           color: #090;\
-          width: 554px;\
+          width: 539px;\
         }\
       ";
       GM_addStyle(this.noticeCss);
@@ -2145,6 +2128,7 @@ var util = {
           margin-bottom: 10px;\
           border: 1px solid #EFF2FA;\
           -moz-box-shadow: 1px 1px 1px #ddd;\
+          -webkit-box-shadow: 1px 1px 1px #ddd;\
           box-shadow: 1px 1px 1px #ddd;\
           font-size: 10pt;\
         }\
