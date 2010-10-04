@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        Baidu++
 // @namespace   http://www.5isharing.com
-// @version     1.7.2
+// @version     1.7.4
 // @include     http://www.baidu.com/s?*
 // @include     http://www.baidu.com/baidu?*
 // @description 增强百度搜索结果页
@@ -11,7 +11,7 @@
 
 (function() {
 
-var version = "1.7.2";
+var version = "1.7.4";
 
 // ==Functions==
 // emulate greasemonkey api
@@ -310,7 +310,7 @@ var baidu = {
   },
   
   info: function() {
-    return c("bi")[0];
+    return $('tool');
   },
   
   sideBarContainer: function() {
@@ -386,6 +386,68 @@ var logo = '<span class="bpp-logo">'
   + '<span class="bpp-logo-plus2">+</span>'
   + '</span>';
 
+var shadow = {
+  _getInst: function() {
+    if (!this._created) {
+      this._addCss();
+      var _shadow = create('div');
+      _shadow.id = 'bpp-shadow';
+      var self = this;
+      _shadow.addEventListener('click', function() {
+        self.hide();
+      }, false);
+      append(_shadow, baidu.get("body"));
+      this._inst = _shadow;
+      this._created = true;
+    }
+    return this._inst;
+  },
+  _addCss: function() {
+    GM_addStyle('#bpp-shadow {\
+      background: #000;\
+      opacity: .5;\
+      position: fixed;\
+      z-index: 1000;\
+      top: 0;\
+      left: 0;\
+    }');
+  },
+  // public
+  setBox: function(box) {
+    this._box = box;
+    return this;
+  },
+  getBox: function() {
+    if (this._box) return this._box;
+    var e = {
+      message: 'box has not been set'
+    };
+    throw e;
+  },
+  show: function() {
+    this._getInst().style.display 
+      = this.getBox().style.display
+      = 'block';
+    // adjust size
+    this._inst.style.width  = screen.availWidth + "px"; 
+    this._inst.style.height = screen.availHeight + "px";
+    // adjust box pos
+    this.getBox().style.top  = document.documentElement.clientHeight / 2 
+       - this.getBox().clientHeight / 2 
+       + "px";
+    this.getBox().style.left = document.documentElement.clientWidth / 2 
+       - this.getBox().clientWidth  / 2 
+       + "px";
+    return this;
+  },
+  hide: function() {
+    this._getInst().style.display 
+      = this.getBox().style.display 
+      = 'none';
+    return this;
+  }
+};
+
 var modules = {
   config: {
     groups: [
@@ -405,11 +467,8 @@ var modules = {
           innerHTML = logo;
           href = "javascript:void(0)";
           addEventListener("click", function() {
-            with (modules.config) {
-              shadow().show();
-              panel().show();
-              about();
-            }
+            shadow.setBox(modules.config.panel()).show(); 
+            modules.config.about();
           }, false);
         }
       }
@@ -458,162 +517,101 @@ var modules = {
     panel: function() {
       if (!this._panel) {
         this._panel = create("div");
+        this._panel.id = 'bpp-panel';
 
-        this._panel.show = function() {
-          if (this.style.display == "none") {
-            this.style.display = "";
-          } else {
-            this.init();
-          }
-          this.adjustPos();
-        }
-        
-        this._panel.hide = function() {
-          this.style.display = "none";
-        }
-        
-        this._panel.init = function() {
-          with (this.style) {
-            width = height = "420px";
-            padding     = "20px"; 
-            border      = "1px solid #ccf"; 
-            background  = "#fff";
-            position    = "fixed"; 
-            zIndex      = 2000; 
-            MozBorderRadius = "10px";
-            borderRadius = "10px";
-          }
-          append(this, baidu.get("body"));
-          var form = create("form"); form.id = "bpp-config-form"; append(form, this);
-          var css = "\
-            #bpp-config-form > div {\
-              height: 350px; clear: both; padding: 10px;\
-              -moz-box-shadow: 1px 1px 1px #aaa;\
-              -webkit-box-shadow: 1px 1px 1px #aaa;\
-              box-shadow: 1px 1px 1px #aaa;\
-            }\
-            #bpp-config-form ul {\
-              list-style: none; font-size: 9pt; margin: 0; padding: 0;\
-            }\
-            #bpp-config-form li {\
-              float: left;\
-            }\
-            #bpp-config-form li a {\
-              text-decoration: none; color: #666; text-align: center; width: 50px;\
-              display: block; padding:4px;\
-              -moz-border-radius: 4px 4px 0 0;\
-              border-radius: 4px 4px 0 0;\
-            }\
-            .bpp-config-tab-focus {\
-              color: #000 !important;\
-              -moz-box-shadow: 1px 0px 0px #aaa;\
-              -webkit-box-shadow: 1px 0px 0px #aaa;\
-              box-shadow: 1px 0px 0px #aaa;\
-              margin-right: 1px;\
-            }\
-            #bpp-config-form li a:hover,\
-            #bpp-config-form li a:focus,\
-            .bpp-config-tab-focus {\
-              font-weight: bold;\
-            }\
-            #bpp-config-form table {\
-              display: none;\
-            }\
-            .bpp-config-table-selected {\
-              display: table !important;\
-            }\
-            #bpp-config-form td {\
-              padding: 3px 0;\
-            }\
-            #bpp-config-form td > a {\
-              color: #0a0; margin: 0 3px;\
-            }\
-            #bpp-config-form td > a:hover {\
-              color: #0e0; cursor: help;\
-            }\
-            #bpp-config-form td textarea {\
-              display: block; font-size: 9pt; width:300px; height: 80px;\
-            }\
-            #bpp-config-form fieldset {\
-              margin: 5px;\
-            }\
-            #bpp-config-form legend {\
-              font-size: 9pt; color: #666;\
-            }\
-            #bpp-config-form fieldset p {\
-              margin: 0; font-size: 9pt; color: #333;\
-            }\
-            #bpp-config-form > button {\
-              float: right; margin: 10px;\
-            }\
-            #bpp-config-form > p {\
-              font-size:8pt; color: #666;\
-            }\
-            #bpp-config-form > div > table > tbody > tr > td > p {\
-              font-size:9pt; line-height: 200%;\
-            }\
-            #bpp-config-form > div > table > tbody > tr > td > p > a {\
-              margin: 0;\
-            }\
-          ";
-          GM_addStyle(css);
-          append(modules.config.tabs(),     form);
-          append(modules.config.options(),  form);
-          append(modules.config.closeBtn(), form);
-          append(modules.config.tip(),      form);
-          modules.config.closeBtn().focus();
-        }
-        
-        this._panel.adjustPos = function() {
-          this.style.top  = document.documentElement.clientHeight / 2 
-             - modules.config.panel().clientHeight / 2 
-             + "px";
-          this.style.left = document.documentElement.clientWidth / 2 
-             - modules.config.panel().clientWidth  / 2 
-             + "px";
-        }
+        append(this._panel, baidu.get("body"));
+        var form = create("form"); 
+        form.id = "bpp-config-form"; 
+        append(form, this._panel);
+        var css = "#bpp-panel {\
+          width: 420px;\
+          height: 420px;\
+          border: 1px solid #ccf;\
+          background: #fff;\
+          position: fixed;\
+          z-index: 2000;\
+          -moz-border-radius: 10px;\
+          -webkit-border-radius: 10px;\
+          border-radius: 10px;\
+          padding: 20px;\
+        }\
+        #bpp-config-form > div {\
+          height: 350px; clear: both; padding: 10px;\
+          -moz-box-shadow: 1px 1px 1px #aaa;\
+          -webkit-box-shadow: 1px 1px 1px #aaa;\
+          box-shadow: 1px 1px 1px #aaa;\
+        }\
+        #bpp-config-form ul {\
+          list-style: none; font-size: 9pt; margin: 0; padding: 0;\
+        }\
+        #bpp-config-form li {\
+          float: left;\
+        }\
+        #bpp-config-form li a {\
+          text-decoration: none; color: #666; text-align: center; width: 50px;\
+          display: block; padding:4px;\
+          -moz-border-radius: 4px 4px 0 0;\
+          border-radius: 4px 4px 0 0;\
+        }\
+        .bpp-config-tab-focus {\
+          color: #000 !important;\
+          -moz-box-shadow: 1px 0px 0px #aaa;\
+          -webkit-box-shadow: 1px 0px 0px #aaa;\
+          box-shadow: 1px 0px 0px #aaa;\
+          margin-right: 1px;\
+        }\
+        #bpp-config-form li a:hover,\
+        #bpp-config-form li a:focus,\
+        .bpp-config-tab-focus {\
+          font-weight: bold;\
+        }\
+        #bpp-config-form table {\
+          display: none;\
+        }\
+        .bpp-config-table-selected {\
+          display: table !important;\
+        }\
+        #bpp-config-form td {\
+          padding: 3px 0;\
+        }\
+        #bpp-config-form td > a {\
+          color: #0a0; margin: 0 3px;\
+        }\
+        #bpp-config-form td > a:hover {\
+          color: #0e0; cursor: help;\
+        }\
+        #bpp-config-form td textarea {\
+          display: block; font-size: 9pt; width:300px; height: 80px;\
+        }\
+        #bpp-config-form fieldset {\
+          margin: 5px;\
+        }\
+        #bpp-config-form legend {\
+          font-size: 9pt; color: #666;\
+        }\
+        #bpp-config-form fieldset p {\
+          margin: 0; font-size: 9pt; color: #333;\
+        }\
+        #bpp-config-form > button {\
+          float: right; margin: 10px;\
+        }\
+        #bpp-config-form > p {\
+          font-size:8pt; color: #666;\
+        }\
+        #bpp-config-form > div > table > tbody > tr > td > p {\
+          font-size:9pt; line-height: 200%;\
+        }\
+        #bpp-config-form > div > table > tbody > tr > td > p > a {\
+          margin: 0;\
+        }";
+        GM_addStyle(css);
+        append(modules.config.tabs(),     form);
+        append(modules.config.options(),  form);
+        append(modules.config.closeBtn(), form);
+        append(modules.config.tip(),      form);
+        modules.config.closeBtn().focus();
       }
       return this._panel;
-    },
-    
-    shadow: function() {
-      if (!this._shadow) {
-        this._shadow = create('div');
-        this._shadow.addEventListener("click", function() {
-          with (modules.config) {
-            panel().hide();
-            shadow().hide();
-          }
-        }, false);
-        
-        this._shadow.show = function() {
-          with (this.style) {
-            if (display == "none") {
-              display = "";
-            } else {
-              this.init();
-            }
-          }
-        }
-        
-        this._shadow.hide = function() {
-          this.style.display = "none";
-        }
-        
-        this._shadow.init = function() {
-          append(this, baidu.get("body"));
-          with (this.style) {
-            width = screen.availWidth + "px"; 
-            height = screen.availHeight + "px";
-            background = "#000"; 
-            opacity = 0.5;
-            position = "fixed"; 
-            zIndex = 1000; 
-            top = 0;
-          }
-        }
-      }
-      return this._shadow;
     },
     
     fieldset: function() {
@@ -635,20 +633,20 @@ var modules = {
       }
       return this._tip
     },
+
+    selectTab: function(tab) {
+      if (this._selectedTab) {
+        this._selectedTab.className = '';
+      }
+      tab.className = "bpp-config-tab-focus";
+      this._selectedTab = tab;
+    },
     
     tabs: function() {
       if (!this._tabs) {
         this._tabs = create("ul");
         var config = modules.config;
         var groups = config.groups;
-        
-        this._tabs.select = function(tab) {
-          if (this._selected) {
-            this._selected.className = null;
-          }
-          tab.className = "bpp-config-tab-focus";
-          this._selected = tab;
-        }
         
         for (var i = 0; i < groups.length; i++) {
           var group = groups[i];
@@ -662,21 +660,29 @@ var modules = {
             style.backgroundColor = group.color;
             // events
             addEventListener("click", function() {
-              config.tabs().select(this);
+              config.selectTab(this);
               t("p", config.fieldset())[0].innerHTML = "";
               var options = config.options();
               var order = this.getAttribute("order");
-              options.select(options.tables[order]);
+              config.selectTable(options.tables[order]);
               options.style.background = groups[order].color;
               config.closeBtn().focus();
             }, false);
           }
           if (i == 0) {
-            config.tabs().select(a);
+            config.selectTab(a);
           }
         }
       }
       return this._tabs;
+    },
+
+    selectTable: function(table) {
+      if (this._selectedTable) {
+        this._selectedTable.className = '';
+      }
+      table.className = "bpp-config-table-selected";
+      this._selectedTable = table;
     },
     
     options: function() {
@@ -718,17 +724,9 @@ var modules = {
         }
         append(config.fieldset(), this._options);
         
-        this._options.select = function(table) {
-          if (this._selected) {
-            this._selected.className = null;
-          }
-          table.className = "bpp-config-table-selected";
-          this._selected = table;
-        }
-        
         this._options.tables = t("table", this._options);
         
-        this._options.select(this._options.tables[0]);
+        config.selectTable(this._options.tables[0]);
       }
       return this._options;
     },
@@ -841,7 +839,7 @@ var modules = {
     enable: function() { return true; },
     
     run: function() {
-      append(this.btn(), c("Tit")[0]);
+      append(this.btn(), c("nv")[0]);
     }
   },
 
@@ -1248,34 +1246,32 @@ var modules = {
   },
   
   fixedSearch: {
-    
     name: "固定搜索栏",
-
     cid: 1,
-
     config: "bpp-fixedSearch",
-
     help: "固定搜索框在顶部。可能会导致页面滚动变得有点卡",
-
     enable: function() {
       return gm(this.config, false);
     },
-
     run: function() {
-      GM_addStyle("\
-        #wrapper > table:first-child {\
-          position: fixed;\
-          z-index: 100;\
-          background: #fff;\
-          top: 0;\
-          padding-top: 5px;\
-          padding-bottom: 5px;\
-          -moz-box-shadow: 0 2px 2px #999;\
-          -webkit-box-shadow: 0 2px 2px #999;\
-          box-shadow: 0 2px 2px #999;\
-        }\
-        body { margin-top: 66px; }\
-      ");
+      GM_addStyle("#head {\
+        position: fixed;\
+        z-index: 100;\
+        background: #fff;\
+        top: 0;\
+        padding-top: 5px;\
+        padding-bottom: 5px;\
+        -moz-box-shadow: 0 2px 2px #999;\
+        -webkit-box-shadow: 0 2px 2px #999;\
+        box-shadow: 0 2px 2px #999;\
+      }\
+      #u {\
+        position: fixed;\
+        z-index: 101;\
+      }\
+      body {\
+        margin-top: 66px;\
+      }");
     }
   },
 
@@ -1684,8 +1680,9 @@ var modules = {
       GM_addStyle("\
         img.bpp-favicon-img {\
           margin-right: 8px;\
-          position:     relative;\
-          top: 3px;\
+          position: relative;\
+          top: 1px;\
+          margin-left: 4px;\
           border: 0;\
           width: 16px;\
           height: 16px;\
@@ -1722,7 +1719,7 @@ var modules = {
           append(li, this._getUl());
         } else {
           append(ico, link);
-          append(link, x('.//td[2]', baidu.get("info")).snapshotItem(0));
+          append(link, baidu.get("info"));
         }
       }
     }
